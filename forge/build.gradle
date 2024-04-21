@@ -30,6 +30,7 @@ dependencies {
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionForge")) { transitive = false }
+	implementation(include("io.github.juuxel:libninepatch:1.2.0"))
 }
 
 processResources {
