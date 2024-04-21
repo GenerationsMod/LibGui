@@ -1,200 +1,54 @@
 plugins {
-	id 'fabric-loom' version '1.4.+'
-	id 'maven-publish'
-	id 'checkstyle'
+    id "architectury-plugin" version "3.4-SNAPSHOT"
+    id "dev.architectury.loom" version "1.3-SNAPSHOT" apply false
 }
 
-base {
-	archivesName = project.archives_base_name
+architectury {
+    minecraft = rootProject.minecraft_version
 }
 
-version = "$project.mod_version+$project.minecraft_version"
-group = project.maven_group
+subprojects {
+    apply plugin: "dev.architectury.loom"
 
-sourceSets {
-	javadoc {
-	}
+    loom {
+        silentMojangMappingsLicense()
+    }
 
-	testMod {
-		compileClasspath += main.compileClasspath
-		runtimeClasspath += main.runtimeClasspath
-	}
+    dependencies {
+        minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
+        // The following line declares the mojmap mappings, you may use other mappings as well
+//        mappings loom.officialMojangMappings()
+        // The following line declares the yarn mappings you may select this one as well.
+         mappings "net.fabricmc:yarn:1.20.1+build.10:v2"
+    }
 }
 
-loom {
-	createRemapConfigurations(sourceSets.testMod)
+allprojects {
+    apply plugin: "java"
+    apply plugin: "architectury-plugin"
+    apply plugin: "maven-publish"
 
-	runs {
-		testModClient {
-			client()
-			name = 'Test Mod Client'
-			source sourceSets.testMod
-		}
+    base {
+        archivesName = rootProject.archives_base_name
+    }
 
-		testModServer {
-			server()
-			name = 'Test Mod Server'
-			source sourceSets.testMod
-		}
-	}
-}
+    version = rootProject.mod_version
+    group = rootProject.maven_group
 
-// Work around https://github.com/FabricMC/fabric-loom/issues/890.
-afterEvaluate {
-	for (def config : [configurations.apiElements, configurations.runtimeElements]) {
-		def parents = new HashSet<>(config.extendsFrom)
-		parents.removeIf { it.name.startsWith 'modTestMod' }
-		config.extendsFrom = parents
-	}
-}
+    repositories {
+        // Add repositories to retrieve artifacts from in here.
+        // You should only use this when depending on other mods because
+        // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
+        // See https://docs.gradle.org/current/userguide/declaring_repositories.html
+        // for more information about repositories.
+    }
 
-repositories {
-	maven {
-		url "https://server.bbkr.space/artifactory/libs-release"
-		content {
-			includeGroup "io.github.cottonmc"
-		}
-	}
-	maven {
-		url = "https://maven.terraformersmc.com/releases"
-		content {
-			includeGroup "com.terraformersmc"
-		}
-	}
-}
+    tasks.withType(JavaCompile) {
+        options.encoding = "UTF-8"
+        options.release = 17
+    }
 
-dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
-	// True: module classes are used in public API classes/methods/fields
-	def fabricApiModules = [
-			'fabric-api-base': true,
-			'fabric-lifecycle-events-v1': false,
-			'fabric-networking-api-v1': true,
-			'fabric-rendering-v1': false,
-			'fabric-resource-loader-v0': false,
-	]
-	fabricApiModules.forEach { module, api ->
-		def dependency = fabricApi.module(module, project.fabric_version)
-
-		if (api) {
-			modApi dependency
-		} else {
-			modImplementation dependency
-		}
-	}
-
-	modImplementation "io.github.cottonmc:Jankson-Fabric:${project.jankson_version}"
-	include "io.github.cottonmc:Jankson-Fabric:${project.jankson_version}"
-
-	include api("io.github.juuxel:libninepatch:${project.libninepatch_version}")
-
-	modCompileOnly("com.terraformersmc:modmenu:$project.modmenu_version") {
-		exclude group: 'net.fabricmc.fabric-api'
-		exclude group: 'net.fabricmc', module: 'fabric-loader'
-	}
-
-	// Test mod dependencies
-	testModImplementation sourceSets.main.output
-	modTestModImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	modTestModRuntimeOnly("com.terraformersmc:modmenu:$project.modmenu_version") {
-		exclude group: 'net.fabricmc.fabric-api'
-		exclude group: 'net.fabricmc', module: 'fabric-loader'
-	}
-}
-
-processResources {
-	inputs.property "version", project.version
-
-	filesMatching("fabric.mod.json") {
-		expand "version": project.version
-	}
-}
-
-java {
-	withSourcesJar()
-	withJavadocJar()
-
-	sourceCompatibility = JavaVersion.VERSION_17
-	targetCompatibility = JavaVersion.VERSION_17
-}
-
-tasks.withType(JavaCompile) {
-	// ensure that the encoding is set to UTF-8, no matter what the system default is
-	// this fixes some edge cases with special characters not displaying correctly
-	// see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
-	options.encoding = "UTF-8"
-	options.release.set 17
-}
-
-jar {
-	from "CREDITS.txt", "LICENSE"
-}
-
-checkstyle {
-	configFile = rootProject.file('checkstyle.xml')
-	configProperties = [suppressions: rootProject.file('checkstyle.suppressions.xml').absolutePath]
-	toolVersion = '10.9.2'
-}
-
-def javadocBuildJar = tasks.register('javadocBuildJar', Jar) {
-	destinationDirectory = file('build/devlibs')
-	archiveClassifier = 'javadoc-build'
-	from sourceSets.javadoc.output
-}
-
-javadoc {
-	dependsOn javadocBuildJar
-
-	options {
-		links "https://maven.fabricmc.net/docs/yarn-$project.yarn_mappings"
-		links 'https://javadoc.io/doc/org.jetbrains/annotations/19.0.0'
-		taglets 'io.github.cottonmc.cotton.gui.jd.ExperimentalTaglet',
-				'io.github.cottonmc.cotton.gui.jd.PropertyTaglet'
-		tagletPath javadocBuildJar.get().archiveFile.get().asFile
-	}
-
-	exclude("**/impl/**")
-}
-
-// configure the maven publication
-publishing {
-	publications {
-		maven(MavenPublication) {
-			from components.java
-			pom {
-				name = "LibGui"
-				description = "Minecraft GUI Library"
-				url = "https://github.com/CottonMC/LibGui"
-				licenses {
-					license {
-						name = "MIT"
-						url = "https://github.com/CottonMC/LibGui/blob/HEAD/LICENSE"
-					}
-				}
-				developers {
-					developer {
-						name = "CottonMC"
-						url = "https://github.com/CottonMC"
-					}
-				}
-			}
-		}
-	}
-
-	// select the repositories you want to publish to
-	repositories {
-		def env = System.getenv()
-		if (env.MAVEN_URL) {
-			maven {
-				url = env.MAVEN_URL
-				credentials {
-					username = env.MAVEN_USERNAME
-					password = env.MAVEN_PASSWORD
-				}
-			}
-		}
-	}
+    java {
+        withSourcesJar()
+    }
 }
