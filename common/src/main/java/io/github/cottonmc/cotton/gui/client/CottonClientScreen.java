@@ -13,7 +13,6 @@ import io.github.cottonmc.cotton.gui.impl.client.CottonScreenImpl;
 import io.github.cottonmc.cotton.gui.impl.client.FocusElements;
 import io.github.cottonmc.cotton.gui.impl.client.MouseInputHandler;
 import io.github.cottonmc.cotton.gui.impl.client.NarrationHelper;
-import io.github.cottonmc.cotton.gui.impl.mixin.client.ScreenAccessor;
 import io.github.cottonmc.cotton.gui.widget.WPanel;
 import io.github.cottonmc.cotton.gui.widget.WWidget;
 import io.github.cottonmc.cotton.gui.widget.data.InputResult;
@@ -73,7 +72,7 @@ public class CottonClientScreen extends Screen implements CottonScreenImpl {
 
 		if (root != null) {
 			Element rootPanelElement = FocusElements.ofPanel(root);
-			((ScreenAccessor) this).libgui$getChildren().add(rootPanelElement);
+			this.children.add(rootPanelElement);
 			setInitialFocus(rootPanelElement);
 		} else {
 			LOGGER.warn("No root panel found, keyboard navigation disabled");

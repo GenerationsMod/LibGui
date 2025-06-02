@@ -10,3 +10,8 @@ dependencies {
 	modApi "dev.architectury:architectury:${rootProject.architectury_version}"
 	implementation("io.github.juuxel:libninepatch:1.2.0")
 }
+
+
+loom {
+	accessWidenerPath = file("src/main/resources/libgui.accesswidener")
+}
