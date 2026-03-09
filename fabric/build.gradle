@@ -50,7 +50,7 @@ dependencies {
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) { transitive false }
-	implementation(include("io.github.juuxel:libninepatch:1.2.0"))
+	api(include("io.github.juuxel:libninepatch:1.2.0"))
 }
 
 processResources {
